@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>JS</title>
+    <style>
+      html, body { margin: 0; padding: 0; overflow: hidden; }
+
+    </style>
+  </head>
+  <body>
+  </body>
+    <!-- Shaders -->
+    <script type="x-shader/x-vertex" id="volumetric-vertex">
+    
+
+
+          #ifdef GL_ES
+    precision highp float;
+    #endif
+    
+    uniform float amplitude;
+    attribute float displacement;
+    varying vec3 vNormal;
+
+    void main() {
+
+      vNormal = normal;
+      
+      // multiply our displacement by the
+      // amplitude. The amp will get animated
+      // so we'll have animated displacement
+      vec3 newPosition = position + 
+                 normal * 
+                 vec3(displacement *
+                  amplitude);
+
+      gl_Position = projectionMatrix *
+              modelViewMatrix *
+              vec4(newPosition,1.0);
+    }
+    </script>
+  
+    <script type="x-shader/x-fragment" id="volumetric-fragment">
+    
+
+
+    #ifdef GL_ES
+    precision highp float;
+    #endif
+    
+    // same name and type as VS
+    varying vec3 vNormal;
+
+    void main() {
+
+      // calc the dot product and clamp
+      // 0 -> 1 rather than -1 -> 1
+      vec3 light = vec3(0.5,0.2,1.0);
+      
+      // ensure it's normalized
+      light = normalize(light);
+      
+      float dProd = max(0.0, dot(vNormal, light));
+      
+      // feed into our frag colour
+      //gl_FragColor = vec4(dProd, dProd, dProd, 1.0);
+      gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+    }
+    </script>
+    <!-- End Shaders -->
+    <script src="js/three.min.js"></script>
+    <script src="js/OrbitControls.js"></script>
+    
+    <script>
+
+      var scene = new THREE.Scene();
+      var aspect = window.innerWidth / window.innerHeight;
+      var camera = new THREE.PerspectiveCamera( 75, aspect, 0.1, 10000 );
+      var renderer = new THREE.WebGLRenderer();
+      renderer.setSize( window.innerWidth, window.innerHeight );
+      renderer.setClearColor( 0x000000 );
+      document.body.appendChild( renderer.domElement );
+     // var light = new THREE.HemisphereLight( 0x404040, 0xff0000);
+
+      //scene.add(light);
+     // var geometry = new THREE.PlaneGeometry(120, 120, 90, 90);
+      var geometry = new THREE.SphereGeometry(120, 50, 50);
+      // var geometry = new THREE.BoxGeometry(60, 60, 60,34,34,34);
+
+      geometry.computeTangents();
+
+      var attributes = {
+        displacement: {
+          type: 'f', // a float
+          value: [] // an empty array
+        }
+      };
+
+      var uniforms = {
+        amplitude: {
+          type: 'f', // a float
+          value: 0
+        }
+      };
+
+      var material = new THREE.ShaderMaterial({
+        uniforms: uniforms,
+        attributes: attributes,
+        vertexShader: document.getElementById( 'volumetric-vertex' ).textContent,
+        fragmentShader: document.getElementById( 'volumetric-fragment' ).textContent,
+        wireframe: true
+      });
+
+      var aurora = new THREE.Mesh(geometry, material);
+
+      // populate attributes array
+      var vertices = aurora.geometry.vertices;
+      var values = attributes.displacement.value;
+      for(var v = 0; v < vertices.length; v++) {
+        console.log(v);
+        values.push(Math.random() * 500);
+      }
+
+      camera.position.z = 100;
+      scene.add(aurora);
+      var controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+    //aurora.scale.set(80, 80, 80);
+    //aurora.position.set(0, 10, 0);
+    aurora.rotation.set(Math.PI/2, 0, 0);
+    //aurora.renderDepth = 2000;
+      var frame = 0;
+      var render = function () {
+          uniforms.amplitude.value =
+    Math.sin(frame);
+
+  // update the frame counter
+  frame += 0.01;
+        requestAnimationFrame( render );
+        //aurora.rotation.x += 0.001;
+        //aurora.rotation.y += 0.001;
+        renderer.render( scene, camera );
+        controls.update();
+      };
+
+      render();
+    </script>
+  
+</html>
+
+
+
